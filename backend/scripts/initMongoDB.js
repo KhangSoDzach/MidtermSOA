@@ -27,7 +27,8 @@ async function initializeDatabase() {
         phone_number: '0123456789',
         email: 'admin@example.com',
         address: '123 Admin Street',
-        available_balance: 50000000
+        available_balance: 50000000,
+        is_locked: false
       },
       {
         customer_id: 'CUST002',
@@ -37,7 +38,8 @@ async function initializeDatabase() {
         phone_number: '0987654321',
         email: 'user1@example.com',
         address: '456 User Street',
-        available_balance: 25000000
+        available_balance: 25000000,
+        is_locked: false
       },
       {
         customer_id: 'CUST003',
@@ -47,7 +49,8 @@ async function initializeDatabase() {
         phone_number: '0901234567',
         email: '522H0003@student.edu.vn',
         address: 'HCMC',
-        available_balance: 20000000
+        available_balance: 20000000,
+        is_locked: false
       },
       {
         customer_id: 'CUST004',
@@ -57,7 +60,19 @@ async function initializeDatabase() {
         phone_number: '0901234567',
         email: 'vamila2710@gmail.com',
         address: 'HCMC',
-        available_balance: 60000000
+        available_balance: 18000000,
+        is_locked: false
+      },
+      {
+        customer_id: 'CUST005',
+        username: 'minh123',
+        password: bcrypt.hashSync('123123', 10),
+        full_name: 'Hoang Van Minh',
+        phone_number: '0901234567',
+        email: 'vamila2710@gmail.com',
+        address: 'HCMC',
+        available_balance: 1800000,
+        is_locked: false
       }
     ];
     
@@ -92,7 +107,7 @@ async function initializeDatabase() {
         student_name: 'Hoang Van Minh',
         semester: 'HK1',
         academic_year: '2024-2025',
-        tuition_amount: 18000000,
+        tuition_amount: 1800000,
         due_date: new Date('2024-12-31'),
         status: 'UNPAID'
       },

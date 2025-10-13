@@ -1,9 +1,8 @@
 const { findTuitionByStudentId, findTuitionById, updateTuitionStatus } = require('../models/tuitionModel');
 const { createPayment, completePayment, cancelPayment, getPaymentById } = require('../models/paymentModel');
-const { updateBalance, findCustomerById } = require('../models/customerModel');
-const { sendOtpEmail } = require('../utils/email');
+const { findCustomerById, updateBalance, lockCustomer, unlockCustomer } = require('../models/customerModel');
+const { sendOtpEmail,sendInvoiceEmail } = require('../utils/email');
 const jwt = require('jsonwebtoken');
-
 async function searchTuition(req, res) {
   const { studentId } = req.params;
   const tuitions = await findTuitionByStudentId(studentId);
@@ -37,7 +36,11 @@ async function createTuitionPayment(req, res) {
   if (tuition.status === 'PAID') {
     return res.status(400).json({ message: 'Tuition already paid' });
   }
-  
+  const existingPayment = await getPaymentByTuitionId(tuitionFeeId);
+  if (existingPayment && (existingPayment.status === 'PENDING' || existingPayment.status === 'CANCELLED')) {
+    return res.status(400).json({ message: 'This tuition is already being processed by another account' });
+  }
+
   if (customer.available_balance < tuition.tuition_amount) {
     return res.status(400).json({ message: 'Insufficient balance' });
   }
@@ -54,7 +57,7 @@ async function createTuitionPayment(req, res) {
 
   await sendOtpEmail(customer.email, otp);
 
-  console.log(`Created payment ${paymentId} with OTP: ${otp}`); // Log để debug
+  console.log(`Created payment ${paymentId} with OTP: ${otp}`);
 
   res.json({ 
     paymentId,
@@ -70,7 +73,8 @@ async function createTuitionPayment(req, res) {
 
 async function completeTuitionPayment(req, res) {
   const { paymentId, otp, otpToken } = req.body;
-
+  const customerId = req.user.customerId;
+  try{
   let decoded;
   try {
     decoded = jwt.verify(otpToken, process.env.JWT_SECRET);
@@ -80,6 +84,11 @@ async function completeTuitionPayment(req, res) {
 
   if (decoded.paymentId !== paymentId || decoded.otp !== otp) {
     return res.status(400).json({ message: 'Invalid OTP' });
+  }
+
+  const locked = await lockCustomer(customerId);
+  if (!locked) {
+    return res.status(409).json({ message: 'Account is currently processing another transaction' });
   }
 
   const payment = await getPaymentById(paymentId);
@@ -92,9 +101,15 @@ async function completeTuitionPayment(req, res) {
   await updateBalance(payment.customer_id, payment.amount);
   
   await updateTuitionStatus(payment.tuition_fee_id, 'PAID');
+
   
+
   const tuition = await findTuitionById(payment.tuition_fee_id);
-  
+  const customer = await findCustomerById(payment.customer_id);
+  if (customer && customer.email) {
+    await sendInvoiceEmail(customer.email, payment, tuition, customer);
+  }
+
   const invoice = {
     paymentId: payment.payment_id,
     studentName: tuition.student_name,
@@ -107,6 +122,11 @@ async function completeTuitionPayment(req, res) {
   };
 
   res.json({ invoice });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  } finally {
+    await unlockCustomer(customerId);
+  }
 }
 
 async function resendOtp(req, res) {
@@ -116,9 +136,7 @@ async function resendOtp(req, res) {
   console.log(`Resend OTP request - PaymentId: ${paymentId}, CustomerId: ${customerId}`);
 
   try {
-    // Kiểm tra payment có tồn tại và thuộc về customer này không
     const payment = await getPaymentById(paymentId);
-    console.log(`Payment found:`, payment);
     
     if (!payment) {
       console.log('Payment not found');
@@ -130,7 +148,6 @@ async function resendOtp(req, res) {
       return res.status(403).json({ message: 'Unauthorized access to payment' });
     }
 
-    // Kiểm tra payment phải ở trạng thái pending (CANCELLED trong hệ thống này có nghĩa là đang pending OTP)
     console.log(`Payment status: ${payment.status}`);
     if (payment.status === 'COMPLETED') {
       console.log('Payment already completed');
@@ -142,7 +159,6 @@ async function resendOtp(req, res) {
       return res.status(400).json({ message: 'Payment has failed, cannot resend OTP' });
     }
 
-    // Lấy thông tin customer để gửi email
     const customer = await findCustomerById(customerId);
     console.log(`Customer found:`, customer?.email);
     
@@ -151,17 +167,14 @@ async function resendOtp(req, res) {
       return res.status(404).json({ message: 'Customer not found' });
     }
 
-    // Tạo OTP mới
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Tạo token mới
     const otpToken = jwt.sign(
       { otp, paymentId },
       process.env.JWT_SECRET,
       { expiresIn: '5m' }
     );
 
-    // Gửi OTP mới qua email
     await sendOtpEmail(customer.email, otp);
 
     console.log(`Resend OTP for payment ${paymentId}: ${otp} to email: ${customer.email}`); // Log để debug

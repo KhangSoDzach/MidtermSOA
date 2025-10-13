@@ -41,7 +41,12 @@ const customerSchema = new mongoose.Schema({
   available_balance: {
     type: Number,
     default: 0.00
+  },
+  is_locked: {
+    type: Boolean,
+    default: false
   }
+  
 }, {
   timestamps: true
 });
@@ -64,4 +69,28 @@ async function updateBalance(customerId, amount) {
   );
 }
 
-module.exports = { Customer, findCustomerByUsername, findCustomerById, updateBalance };
+
+async function lockCustomer(customerId) {
+  // Chỉ lock nếu hiện đang unlock
+  return await Customer.findOneAndUpdate(
+    { customer_id: customerId, is_locked: false },
+    { $set: { is_locked: true } },
+    { new: true }
+  );
+}
+
+async function unlockCustomer(customerId) {
+  return await Customer.updateOne(
+    { customer_id: customerId },
+    { $set: { is_locked: false } }
+  );
+}
+
+module.exports = {
+  Customer,
+  findCustomerByUsername,
+  findCustomerById,
+  updateBalance,
+  lockCustomer,    
+  unlockCustomer  
+};

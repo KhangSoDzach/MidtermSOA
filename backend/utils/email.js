@@ -31,12 +31,55 @@ async function sendOtpEmail(to, otp) {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`✅ OTP sent to ${to}`);
+    console.log(`OTP sent to ${to}`);
   } catch (err) {
-    console.error('❌ Error sending OTP email:', err);
+    console.error('Error sending OTP :', err);
     throw err;
   }
 }
 
 
-module.exports = { sendOtpEmail };
+async function sendInvoiceEmail(to, payment, tuition, customer) {
+  const mailOptions = {
+    from: `"iBanking" <${process.env.EMAIL_USER}>`,
+    to,
+    subject: `Payment Receipt - ${payment._id}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; padding:20px; background-color:#f9f9f9; border-radius:8px;">
+        <h2 style="color:#007b00;">✅ Payment Successful</h2>
+        <p>Dear <b>${customer.full_name}</b>,</p>
+        <p>Thank you for your payment. Here is your receipt:</p>
+
+        <table style="border-collapse: collapse; width: 100%; margin-top: 10px;">
+          <tr>
+            <td style="padding:8px; border:1px solid #ccc;">Student Name</td>
+            <td style="padding:8px; border:1px solid #ccc;">${tuition.student_name}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px; border:1px solid #ccc;">Student ID</td>
+            <td style="padding:8px; border:1px solid #ccc;">${tuition.student_id}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px; border:1px solid #ccc;">Amount</td>
+            <td style="padding:8px; border:1px solid #ccc; color:#007b00;">${payment.amount.toLocaleString()} VND</td>
+          </tr>
+          <tr>
+            <td style="padding:8px; border:1px solid #ccc;">Payment Date</td>
+            <td style="padding:8px; border:1px solid #ccc;">${new Date(payment.payment_date).toLocaleString()}</td>
+          </tr>
+        </table>
+
+        <p style="color: gray; font-size: 12px;">This is an automated message. Please do not reply to this email.</p>
+      </div>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Invoice sent to ${to}`);
+  } catch (err) {
+    console.error('Error sending invoice email:', err);
+  }
+}
+
+module.exports = { sendOtpEmail, sendInvoiceEmail };

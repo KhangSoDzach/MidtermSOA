@@ -596,8 +596,11 @@
           <label>Transfer Content</label>
           <input type="text" id="transferContent" value="" disabled placeholder="Displayed automatically">
 
-          <label>Amount</label>
-          <input type="text" value="" disabled placeholder="Displayed automatically">
+ 
+          <label>Available Balance</label>
+          <input type="text" id="amount-field" value="" disabled placeholder="Displayed automatically">
+          <div id="balance-warning" style="color: red; font-weight: 600; margin-top: 8px;"></div>
+
         
           <div class="checkbox-container">
             <input type="checkbox" id="terms">
@@ -794,8 +797,17 @@
         document.querySelector('fieldset:nth-of-type(3) input:nth-of-type(2)').value = currentTuition.student_name;
         document.querySelector('fieldset:nth-of-type(3) input:nth-of-type(3)').value = 
           `Tuition fee - ${currentTuition.student_id}`;
-        document.querySelector('fieldset:nth-of-type(3) input:nth-of-type(4)').value = 
-          formatCurrency(currentTuition.tuition_amount);
+        const amountInput = document.getElementById('amount-field');
+        const balanceWarning = document.getElementById('balance-warning');
+        const tuitionAmount = currentTuition.tuition_amount;
+        const userBalance = currentUser.balance ?? currentUser.available_balance ?? 0;
+        amountInput.value = formatCurrency(userBalance);
+
+        if (userBalance < tuitionAmount) {
+          balanceWarning.textContent = `⚠ Not enough balance to pay (${formatCurrency(tuitionAmount)} required)`;
+        } else {
+          balanceWarning.textContent = '';
+        }
       }
     }
 
@@ -824,7 +836,13 @@
         alert('Please search and select tuition information first');
         return;
       }
-      
+      const userBalance = currentUser.balance ?? currentUser.available_balance ?? 0;
+      const tuitionAmount = currentTuition.tuition_amount;
+
+      if (userBalance < tuitionAmount) {
+        alert('Your balance is not enough !');
+        return;
+      }
       const termsChecked = document.getElementById('terms').checked;
       if (!termsChecked) {
         alert('Please agree to the terms and conditions');
