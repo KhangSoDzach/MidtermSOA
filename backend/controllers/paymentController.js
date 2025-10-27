@@ -1,5 +1,5 @@
 const { findTuitionByStudentId, findTuitionById, updateTuitionStatus } = require('../models/tuitionModel');
-const { createPayment, completePayment, cancelPayment, getPaymentById } = require('../models/paymentModel');
+const { createPayment, completePayment, cancelPayment, getPaymentById, getPaymentByTuitionId } = require('../models/paymentModel');
 const { findCustomerById, updateBalance, lockCustomer, unlockCustomer } = require('../models/customerModel');
 const { sendOtpEmail,sendInvoiceEmail } = require('../utils/email');
 const jwt = require('jsonwebtoken');
