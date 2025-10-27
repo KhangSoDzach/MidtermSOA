@@ -37,7 +37,7 @@ async function createTuitionPayment(req, res) {
     return res.status(400).json({ message: 'Tuition already paid' });
   }
   const existingPayment = await getPaymentByTuitionId(tuitionFeeId);
-  if (existingPayment && (existingPayment.status === 'PENDING' || existingPayment.status === 'CANCELLED')) {
+  if (existingPayment && (existingPayment.status === 'PENDING' )) {
     return res.status(400).json({ message: 'This tuition is already being processed by another account' });
   }
 
@@ -92,7 +92,7 @@ async function completeTuitionPayment(req, res) {
   }
 
   const payment = await getPaymentById(paymentId);
-  if (!payment || payment.status !== 'CANCELLED') {
+  if (!payment || payment.status !== 'PENDING') {
     return res.status(400).json({ message: 'Invalid payment or payment already processed' });
   }
 
